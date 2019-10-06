@@ -3,7 +3,8 @@ Full-python LiDAR SLAM.
 
 ### Purpose
 - Full-python LiDAR SLAM
-    - Easy to exchange or connect with any Python-based components independently (e.g., DL front-ends such as [Deep Odometry](https://www.youtube.com/watch?v=Y2s08dv-Mq0))
+    - Easy to exchange or connect with any Python-based components (e.g., DL front-ends such as [Deep Odometry](https://www.youtube.com/watch?v=Y2s08dv-Mq0))
+        - Here, ICP, which is a very basic option for LiDAR, and [Scan Context (IROS 18)](https://github.com/irapkaist/scancontext) are used for odometry and loop detection, respectively. 
 - Hands-on LiDAR SLAM 
     - Easy to understand (could be used for educational purpose)
 - The practical use case of [miniSAM](https://github.com/dongjing3309/minisam)
@@ -23,6 +24,11 @@ Full-python LiDAR SLAM.
 ### Features 
 - Thanks to the Scan Context, reverse loops can be successfully closed.
     - E.g., see KITTI 08, KITTI 14 at Results section below. 
+
+- Time costs 
+    - (No accelerated, naive here) ICP gets 7-10 Hz when sampled (with 8000 points)
+    - (No accelerated, naive here, too) Scan Context gets 1-2 Hz (when 10 ringkey candidates).
+    - miniSAM is enough fast. 
 
 
 ### How to use 
@@ -55,7 +61,7 @@ Some of the results are good, and some of them are not enough. Those results are
 
 ### Author 
 ```sh
-    Giseop Kim (paulgkim@kaist.ac.kr)
+  Giseop Kim (paulgkim@kaist.ac.kr)
 ```
 
 
