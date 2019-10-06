@@ -15,7 +15,7 @@ Full-python LiDAR SLAM.
     - SLAM = Odometry + Loop closure
 
 ### Overview of the PyICP SLAM
-- The pipeline of PyICP SLAM is composed as three parts
+- The pipeline of the PyICP SLAM is composed of three parts
     1. Odometry: [Point-to-point ICP (iterative closest point)](https://github.com/ClayFlannigan/icp/blob/master/icp.py)
     2.  Loop detection: [Scan Context (IROS 18)](https://github.com/irapkaist/scancontext)
     3. Back-end (graph optimizer): [miniSAM](https://github.com/dongjing3309/minisam)
