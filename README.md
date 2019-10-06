@@ -51,7 +51,8 @@ Those results are produced under the same parameter conditions:
 
 gifs (TBA)
 
-Some of the results are good, and some of them are not enough. Those results are for the study;to understand when is the algorithm works or not. 
+Some of the results are good, and some of them are not enough. 
+Those results are for the study to understand when is the algorithm works or not. 
 
 
 
