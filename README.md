@@ -56,36 +56,23 @@ Results (left to right):
 
 - 00 (loop), 01, 02 (loop), 03
 
-<img src="docs/fig/00_7000_011.gif" width="200">
-<img src="docs/fig/01_7000_011.gif" width="200">
-<img src="docs/fig/02_7000_011.gif" width="200">
-<img src="docs/fig/03_7000_011.gif" width="200">
+<img src="docs/fig/00_7000_011.gif" width="200"> <img src="docs/fig/01_7000_011.gif" width="200"> <img src="docs/fig/02_7000_011.gif" width="200"> <img src="docs/fig/03_7000_011.gif" width="200">
 
 - 04, 05 (loop), 06 (loop), 09 (loop)
 
-<img src="docs/fig/04_7000_011.gif" width="200">
-<img src="docs/fig/05_7000_011.gif" width="200">
-<img src="docs/fig/06_7000_011.gif" width="200">
-<img src="docs/fig/09_7000_017.gif" width="200">
+<img src="docs/fig/04_7000_011.gif" width="200"> <img src="docs/fig/05_7000_011.gif" width="200"> <img src="docs/fig/06_7000_011.gif" width="200"> <img src="docs/fig/09_7000_017.gif" width="200">
 
 - 10, 11, 12, 13 (loop)
 
-<img src="docs/fig/10_7000_011.gif" width="200">
-<img src="docs/fig/11_7000_011.gif" width="200">
-<img src="docs/fig/12_7000_011.gif" width="200">
-<img src="docs/fig/13_7000_011.gif" width="200">
+<img src="docs/fig/10_7000_011.gif" width="200"> <img src="docs/fig/11_7000_011.gif" width="200"> <img src="docs/fig/12_7000_011.gif" width="200"> <img src="docs/fig/13_7000_011.gif" width="200">
 
 - 14 (loop), 15 (loop), 16 (loop), 17
 
-<img src="docs/fig/14_7000_015.gif" width="200">
-<img src="docs/fig/15_7000_011.gif" width="200">
-<img src="docs/fig/16_7000_015.gif" width="200">
-<img src="docs/fig/17_7000_011.gif" width="200">
+<img src="docs/fig/14_7000_015.gif" width="200"> <img src="docs/fig/15_7000_011.gif" width="200"> <img src="docs/fig/16_7000_015.gif" width="200"> <img src="docs/fig/17_7000_011.gif" width="200">
 
 - 18 (loop), 20
 
-<img src="docs/fig/18_7000_011.gif" width="200">
-<img src="docs/fig/20_7000_011.gif" width="200">
+<img src="docs/fig/18_7000_011.gif" width="200"> <img src="docs/fig/20_7000_011.gif" width="200">
 
 Some of the results are good, and some of them are not enough.
 Those results are for the study to understand when is the algorithm works or not.
@@ -96,10 +83,10 @@ Those results are for the study to understand when is the algorithm works or not
 - The Scan Context does not find loops well when there is a lane level change (i.e., KITTI 08, as below figures).
 - If the loop threshold is too low (0.07 in the below figure), no loops are detected and thus the odometry errors cannot be reduced.
 
-  - <img src="gif/08_7000_011_notclosed.gif" width="300">
+  - <img src="docs/fig/08_7000_011_notclosed.gif" width="300">
 
 - If the loop threshold is high (0.20 in the below figure), false loops are detected and thus the graph optimization failed.
-    - <img src="gif/08_7000_020_fail.gif" width="300">
+    - <img src="docs/fig/08_7000_020_fail.gif" width="300">
 
 
 
