@@ -86,8 +86,11 @@ def distance_sc(sc1, sc2):
         for j in range(num_sectors):
             col_j_1 = sc1[:, j]
             col_j_2 = sc2[:, j]
-            # if (~np.any(col_j_1) or ~np.any(col_j_2)): <- this part is slow, so omit in python
-            #     continue
+            if (~np.any(col_j_1) or ~np.any(col_j_2)): 
+                # to avoid being divided by zero when calculating cosine similarity
+                # - but this part is quite slow in python, you can omit it.
+                continue 
+
             cossim = np.dot(col_j_1, col_j_2) / (np.linalg.norm(col_j_1) * np.linalg.norm(col_j_2))
             sum_of_cossim = sum_of_cossim + cossim
 

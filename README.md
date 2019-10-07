@@ -21,7 +21,7 @@ Full-python LiDAR SLAM.
     2. Loop detection: [Scan Context (IROS 18)](https://github.com/irapkaist/scancontext)
        -  Reverse loop detection is supported.
     3. Back-end (graph optimizer): [miniSAM](https://github.com/dongjing3309/minisam)
-      - Python API
+       - Python API
 
 
 ### Features
