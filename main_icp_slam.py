@@ -32,7 +32,7 @@ parser.add_argument('--try_gap_loop_detection', type=int, default=10) # same as 
 parser.add_argument('--loop_threshold', type=float, default=0.11) # 0.11 is usually safe (for avoiding false loop closure)
 
 parser.add_argument('--data_base_dir', type=str, 
-                    default='/your/path/data_odometry_velodyne/dataset/sequences')
+                    default='/your/path/.../data_odometry_velodyne/dataset/sequences')
 parser.add_argument('--sequence_idx', type=str, default='00')
 
 parser.add_argument('--save_gap', type=int, default=300)
