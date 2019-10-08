@@ -13,6 +13,7 @@ Full-python LiDAR SLAM.
 ### What is SLAM?
 - In this repository, SLAM (Simultaneous localization and mapping) is considered as
     - SLAM = Odometry + Loop closure
+- In this repository, the state to be optimized only has robot poses; that is _pose-graph SLAM_.
 
 ### Overview of the PyICP SLAM
 - The pipeline of the PyICP SLAM is composed of three parts
