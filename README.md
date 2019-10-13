@@ -30,7 +30,7 @@ Full-python LiDAR SLAM.
     - E.g., see _KITTI 14_ at Results section below.
 
 - Time costs
-    - (Here, no accelerated and naive) ICP gets 7-10 Hz when sampled (with 7000 points)
+    - (Here, no accelerated and naive) ICP gets 7-10 Hz for randomly downsampled points (7000 points)
     - (Here, no accelerated and naive) Scan Context gets 1-2 Hz (when 10 ringkey candidates).
     - miniSAM is enough fast.
 
