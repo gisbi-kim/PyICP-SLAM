@@ -95,3 +95,9 @@ Those results are for the study to understand when is the algorithm works or not
 ```sh
   Giseop Kim (paulgkim@kaist.ac.kr)
 ```
+
+### Contirbutors
+```sh
+  @JustWon (https://github.com/JustWon/PyICP-SLAM)
+    - Supports point cloud visulization using pangolin.
+```
