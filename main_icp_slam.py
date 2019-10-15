@@ -118,7 +118,7 @@ with writer.saving(fig, video_name, num_frames_to_save): # this video saving par
                 PGM.addLoopFactor(loop_transform, loop_idx)
 
                 # 2-2/ graph optimization 
-                PGM.optimizedPoseGraph()
+                PGM.optimizePoseGraph()
 
                 # 2-2/ save optimized poses
                 ResultSaver.saveOptimizedPoseGraphResult(PGM.curr_node_idx, PGM.graph_optimized)
