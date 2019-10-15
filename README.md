@@ -98,6 +98,7 @@ Those results are for the study to understand when is the algorithm works or not
 
 ### Contirbutors
 ```sh
-  @JustWon (https://github.com/JustWon/PyICP-SLAM)
-    - Supports point cloud visulization using pangolin.
+  @JustWon
+    - Supports Pangolin-based point cloud visualization along the SLAM poses.
+    - Go to https://github.com/JustWon/PyICP-SLAM
 ```
