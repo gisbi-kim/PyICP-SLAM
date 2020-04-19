@@ -1,5 +1,6 @@
 # PyICP SLAM
 Full-python LiDAR SLAM.
+(if you find a C++ version of this repo, go to https://github.com/irapkaist/SC-LeGO-LOAM)
 
 ### Purpose
 - Full-python LiDAR SLAM
