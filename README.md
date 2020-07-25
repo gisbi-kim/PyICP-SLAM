@@ -34,6 +34,7 @@ Full-python LiDAR SLAM.
 - Time costs
     - (Here, no accelerated and naive) ICP gets 7-10 Hz for randomly downsampled points (7000 points)
     - (Here, no accelerated and naive) Scan Context gets 1-2 Hz (when 10 ringkey candidates).
+        - if you need the more faster one, consider the C++ version of Scan Context (e.g., https://github.com/irapkaist/SC-LeGO-LOAM)
     - miniSAM is enough fast.
 
 
