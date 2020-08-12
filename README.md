@@ -91,6 +91,8 @@ Those results are for the study to understand when is the algorithm works or not
 
 - If the loop threshold is high (0.20 in the below figure), false loops are detected and thus the graph optimization failed.
     - <img src="docs/fig/08_7000_020_fail.gif" width="300">
+    - but using this non-conservative threshold with a robust kernel would be a solution.
+        - see https://github.com/irapkaist/SC-LeGO-LOAM/blob/3170ba1de7bb0d3f8de5192742e0bbe267415ab4/SC-LeGO-LOAM/LeGO-LOAM/src/mapOptmization.cpp#L994
 
 
 
