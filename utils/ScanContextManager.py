@@ -130,7 +130,6 @@ class ScanContextManager:
         self.ptclouds[node_idx] = ptcloud
         self.scancontexts[node_idx] = sc
         self.ringkeys[node_idx] = rk
-        
 
     def getPtcloud(self, node_idx):
         return self.ptclouds[node_idx]

@@ -1,21 +1,23 @@
 import numpy as np
 np.set_printoptions(precision=4)
 
-import minisam
+# import minisam
+import gtsam
 from utils.UtilsMisc import *
     
 class PoseGraphManager:
     def __init__(self):
-        self.prior_cov = minisam.DiagonalLoss.Sigmas(np.array([1e-6, 1e-6, 1e-6, 1e-4, 1e-4, 1e-4])) 
+
+        self.prior_cov = gtsam.noiseModel.Diagonal.Sigmas(np.array([1e-6, 1e-6, 1e-6, 1e-4, 1e-4, 1e-4]))
         self.const_cov = np.array([0.5, 0.5, 0.5, 0.1, 0.1, 0.1])
-        self.odom_cov = minisam.DiagonalLoss.Sigmas(self.const_cov)
-        self.loop_cov = minisam.DiagonalLoss.Sigmas(self.const_cov)
+        self.odom_cov = gtsam.noiseModel.Diagonal.Sigmas(self.const_cov)
+        self.loop_cov = gtsam.noiseModel.Diagonal.Sigmas(self.const_cov)
 
-        self.graph_factors = minisam.FactorGraph()
-        self.graph_initials = minisam.Variables()
+        self.graph_factors = gtsam.NonlinearFactorGraph()
+        self.graph_initials = gtsam.Values()
 
-        self.opt_param = minisam.LevenbergMarquardtOptimizerParams()
-        self.opt = minisam.LevenbergMarquardtOptimizer(self.opt_param)
+        self.opt_param = gtsam.LevenbergMarquardtParams()
+        self.opt = gtsam.LevenbergMarquardtOptimizer(self.graph_factors, self.graph_initials, self.opt_param)
 
         self.curr_se3 = None
         self.curr_node_idx = None
@@ -29,32 +31,37 @@ class PoseGraphManager:
 
         self.curr_se3 = np.eye(4)
 
-        self.graph_initials.add(minisam.key('x', self.curr_node_idx), minisam.SE3(self.curr_se3))
-        self.graph_factors.add(minisam.PriorFactor(
-                                                minisam.key('x', self.curr_node_idx), 
-                                                minisam.SE3(self.curr_se3), 
+        self.graph_initials.insert(gtsam.symbol('x', self.curr_node_idx), gtsam.Pose3(self.curr_se3))
+        self.graph_factors.add(gtsam.PriorFactorPose3(
+                                                gtsam.symbol('x', self.curr_node_idx), 
+                                                gtsam.Pose3(self.curr_se3), 
                                                 self.prior_cov))
 
     def addOdometryFactor(self, odom_transform):
-        self.graph_initials.add(minisam.key('x', self.curr_node_idx), minisam.SE3(self.curr_se3))
-        self.graph_factors.add(minisam.BetweenFactor(
-                                                minisam.key('x', self.prev_node_idx), 
-                                                minisam.key('x', self.curr_node_idx), 
-                                                minisam.SE3(odom_transform), 
+
+        self.graph_initials.insert(gtsam.symbol('x', self.curr_node_idx), gtsam.Pose3(self.curr_se3))
+        self.graph_factors.add(gtsam.BetweenFactorPose3(
+                                                gtsam.symbol('x', self.prev_node_idx), 
+                                                gtsam.symbol('x', self.curr_node_idx), 
+                                                gtsam.Pose3(odom_transform), 
                                                 self.odom_cov))
 
     def addLoopFactor(self, loop_transform, loop_idx):
-        self.graph_factors.add(minisam.BetweenFactor(
-                                            minisam.key('x', loop_idx), 
-                                            minisam.key('x', self.curr_node_idx),  
-                                            minisam.SE3(loop_transform), 
-                                            self.loop_cov))
+
+        self.graph_factors.add(gtsam.BetweenFactorPose3(
+                                        gtsam.symbol('x', loop_idx), 
+                                        gtsam.symbol('x', self.curr_node_idx), 
+                                        gtsam.Pose3(loop_transform), 
+                                        self.odom_cov))
 
     def optimizePoseGraph(self):
-        self.graph_optimized = minisam.Variables()
-        status = self.opt.optimize(self.graph_factors, self.graph_initials, self.graph_optimized)
-        if status != minisam.NonlinearOptimizationStatus.SUCCESS:
-            print("optimization error: ", status)
+
+        self.opt = gtsam.LevenbergMarquardtOptimizer(self.graph_factors, self.graph_initials, self.opt_param)
+        self.graph_optimized = self.opt.optimize()
+
+        # status = self.opt.optimize(self.graph_factors, self.graph_initials, self.graph_optimized)
+        # if status != minisam.NonlinearOptimizationStatus.SUCCESS:
+            # print("optimization error: ", status)
 
         # correct current pose 
         pose_trans, pose_rot = getGraphNodePose(self.graph_optimized, self.curr_node_idx)
