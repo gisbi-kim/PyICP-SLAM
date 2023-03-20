@@ -12,12 +12,12 @@ from matplotlib.animation import FFMpegWriter
 
 from tqdm import tqdm
 
-from minisam import *
 from utils.ScanContextManager import *
 from utils.PoseGraphManager import *
 from utils.UtilsMisc import *
 import utils.UtilsPointcloud as Ptutils
 import utils.ICP as ICP
+import open3d as o3d
 
 # params
 parser = argparse.ArgumentParser(description='PyICP SLAM arguments')
@@ -37,8 +37,9 @@ parser.add_argument('--sequence_idx', type=str, default='00')
 
 parser.add_argument('--save_gap', type=int, default=300)
 
-args = parser.parse_args()
+parser.add_argument('--use_open3d', action='store_true')
 
+args = parser.parse_args()
 
 # dataset 
 sequence_dir = os.path.join(args.data_base_dir, args.sequence_idx, 'velodyne')
@@ -89,9 +90,26 @@ with writer.saving(fig, video_name, num_frames_to_save): # this video saving par
             icp_initial = np.eye(4)
             continue
 
-        # calc odometry
+        
         prev_scan_down_pts = Ptutils.random_sampling(prev_scan_pts, num_points=args.num_icp_points)
-        odom_transform, _, _ = ICP.icp(curr_scan_down_pts, prev_scan_down_pts, init_pose=icp_initial, max_iterations=20)
+
+        if args.use_open3d: # calc odometry using custom ICP
+            source = o3d.geometry.PointCloud()
+            source.points = o3d.utility.Vector3dVector(curr_scan_down_pts)
+
+            target = o3d.geometry.PointCloud()
+            target.points = o3d.utility.Vector3dVector(prev_scan_down_pts)
+
+            reg_p2p = o3d.pipelines.registration.registration_icp(
+                                                                source = source, 
+                                                                target = target, 
+                                                                max_correspondence_distance = 10, 
+                                                                init = icp_initial, 
+                                                                estimation_method = o3d.pipelines.registration.TransformationEstimationPointToPoint(), criteria = o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration=20)
+                                                                )
+            odom_transform = reg_p2p.transformation 
+        else:   # calc odometry using open3d
+            odom_transform, _, _ = ICP.icp(curr_scan_down_pts, prev_scan_down_pts, init_pose=icp_initial, max_iterations=20)
 
         # update the current (moved) pose 
         PGM.curr_se3 = np.matmul(PGM.curr_se3, odom_transform)

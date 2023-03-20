@@ -7,8 +7,7 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 
-import minisam
-
+import gtsam
 
 def getConstDigitsNumber(val, num_digits):
     return "{:.{}f}".format(val, num_digits)
@@ -48,12 +47,15 @@ def yawdeg2se3(yaw_deg):
 
 
 def getGraphNodePose(graph, idx):
-    pose = graph.at(minisam.key('x', idx))
-    pose_trans = pose.translation()
-    pose_rot = pose.so3().matrix()
+
+    pose = graph.atPose3(gtsam.symbol('x', idx))
+    pose_trans = np.array([pose.x(), pose.y(), pose.z()])
+    pose_rot = pose.rotation().matrix()
+
     return pose_trans, pose_rot
 
 def saveOptimizedGraphPose(curr_node_idx, graph_optimized, filename):
+
     for opt_idx in range(curr_node_idx):
         pose_trans, pose_rot = getGraphNodePose(graph_optimized, opt_idx)
         pose_trans = np.reshape(pose_trans, (-1, 3)).squeeze()
