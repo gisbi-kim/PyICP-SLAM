@@ -63,7 +63,7 @@ def saveOptimizedGraphPose(curr_node_idx, graph_optimized, filename):
         optimized_pose_ith = np.array([ pose_rot[0], pose_rot[1], pose_rot[2], pose_trans[0], 
                                         pose_rot[3], pose_rot[4], pose_rot[5], pose_trans[1], 
                                         pose_rot[6], pose_rot[7], pose_rot[8], pose_trans[2],
-                                        0.0, 0.0, 0.0, 0.1 ])
+                                        0.0, 0.0, 0.0, 1.0 ])
         if(opt_idx == 0):
             optimized_pose_list = optimized_pose_ith
         else:
