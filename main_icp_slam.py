@@ -1,148 +1,170 @@
-import os
-import sys
-import csv
-import copy
-import time
-import random
-import argparse
-
+#! /usr/bin/env python3
+import kiss_icp.tools.cmd
 import numpy as np
+
 np.set_printoptions(precision=4)
-from matplotlib.animation import FFMpegWriter
-
-from tqdm import tqdm
-
+import open3d as o3d
+import argparse
 from utils.ScanContextManager import *
 from utils.PoseGraphManager import *
 from utils.UtilsMisc import *
-import utils.UtilsPointcloud as Ptutils
-import utils.ICP as ICP
-import open3d as o3d
+import copy
+import utils.kiss_icp
+from pathlib import Path
 
-# params
-parser = argparse.ArgumentParser(description='PyICP SLAM arguments')
 
-parser.add_argument('--num_icp_points', type=int, default=5000) # 5000 is enough for real time
+def run():
+    # params
+    parser = argparse.ArgumentParser(description='PyICP SLAM arguments')
 
-parser.add_argument('--num_rings', type=int, default=20) # same as the original paper
-parser.add_argument('--num_sectors', type=int, default=60) # same as the original paper
-parser.add_argument('--num_candidates', type=int, default=10) # must be int
-parser.add_argument('--try_gap_loop_detection', type=int, default=10) # same as the original paper
+    parser.add_argument('--data', type=Path, default='...', help='The data directory used by the specified dataloader')
+    parser.add_argument('--config', type=Path, default='./config/config_kiss_icp.yaml', help='Path to the '
+                                                                                             'configuration file')
+    parser.add_argument('--visualize', action='store_true', help='Open an online visualization')
+    parser.add_argument('--n_scans', type=int, default=-1, help='Number of scans to process')
 
-parser.add_argument('--loop_threshold', type=float, default=0.11) # 0.11 is usually safe (for avoiding false loop closure)
+    parser.add_argument('--num_icp_points', type=int, default=5000)  # 5000 is enough for real time
+    parser.add_argument('--num_rings', type=int, default=20)  # same as the original paper
+    parser.add_argument('--num_sectors', type=int, default=60)  # same as the original paper
+    parser.add_argument('--num_candidates', type=int, default=30)  # must be int
+    parser.add_argument('--try_gap_loop_detection', type=int, default=10)  # same as the original paper
+    parser.add_argument('--loop_threshold', type=float,
+                        default=0.11)  # 0.11 is usually safe (for avoiding false loop closure)
+    parser.add_argument('--save_gap', type=int, default=300)
 
-parser.add_argument('--data_base_dir', type=str, 
-                    default='/your/path/.../data_odometry_velodyne/dataset/sequences')
-parser.add_argument('--sequence_idx', type=str, default='00')
+    args = parser.parse_args()
 
-parser.add_argument('--save_gap', type=int, default=300)
+    # dataset
+    dataloader, data = kiss_icp.tools.cmd.guess_dataloader(args.data, default_dataloader="generic")
+    dataset = kiss_icp.datasets.dataset_factory(dataloader=dataloader, data_dir=data)
+    config = kiss_icp.config.load_config(args.config, deskew=False, max_range=None)
 
-parser.add_argument('--use_open3d', action='store_true')
+    # KISS-ICP initialization
+    KICP = kiss_icp.kiss_icp.KissICP(config=config)
 
-args = parser.parse_args()
+    first = 0
+    last = len(dataset) if args.n_scans == -1 else min(len(dataset), args.n_scans)
+    times = []
 
-# dataset 
-sequence_dir = os.path.join(args.data_base_dir, args.sequence_idx, 'velodyne')
-sequence_manager = Ptutils.KittiScanDirManager(sequence_dir)
-scan_paths = sequence_manager.scan_fullpaths
-num_frames = len(scan_paths)
+    compensator = kiss_icp.deskew.get_motion_compensator(config)
+    preprocessor = kiss_icp.preprocess.get_preprocessor(config)
 
-# Pose Graph Manager (for back-end optimization) initialization
-PGM = PoseGraphManager()
-PGM.addPriorFactor()
+    visualizer = kiss_icp.tools.visualizer.RegistrationVisualizer() if args.visualize else kiss_icp.tools.visualizer.StubVisualizer()
+    visualizer.global_view = True
 
-# Result saver
-save_dir = "result/" + args.sequence_idx
-if not os.path.exists(save_dir): os.makedirs(save_dir)
-ResultSaver = PoseGraphResultSaver(init_pose=PGM.curr_se3, 
-                             save_gap=args.save_gap,
-                             num_frames=num_frames,
-                             seq_idx=args.sequence_idx,
-                             save_dir=save_dir)
+    # Pose Graph Manager (for back-end optimization) initialization
+    PGM = PoseGraphManager()
+    PGM.addPriorFactor()
 
-# Scan Context Manager (for loop detection) initialization
-SCM = ScanContextManager(shape=[args.num_rings, args.num_sectors], 
-                                        num_candidates=args.num_candidates, 
-                                        threshold=args.loop_threshold)
+    # Scan Context Manager (for loop detection) initialization
+    SCM = ScanContextManager(shape=[args.num_rings, args.num_sectors],
+                             num_candidates=args.num_candidates,
+                             threshold=args.loop_threshold)
 
-# for save the results as a video
-fig_idx = 1
-fig = plt.figure(fig_idx)
-writer = FFMpegWriter(fps=15)
-video_name = args.sequence_idx + "_" + str(args.num_icp_points) + ".mp4"
-num_frames_to_skip_to_show = 5
-num_frames_to_save = np.floor(num_frames/num_frames_to_skip_to_show)
-with writer.saving(fig, video_name, num_frames_to_save): # this video saving part is optional
+    absolute_pose = np.eye(4, 4)
 
-    # @@@ MAIN @@@: data stream
-    for for_idx, scan_path in tqdm(enumerate(scan_paths), total=num_frames, mininterval=5.0):
+    for idx in get_progress_bar(first, last):
+        try:
+            raw_frame, time_stamp = dataset[idx]
+        except ValueError:
+            frame = dataset[idx]
+            timestamps = np.zeros(frame.shape[0])
 
-        # get current information     
-        curr_scan_pts = Ptutils.readScan(scan_path) 
-        curr_scan_down_pts = Ptutils.random_sampling(curr_scan_pts, num_points=args.num_icp_points)
+        start_time = time.perf_counter_ns()
 
-        # save current node
-        PGM.curr_node_idx = for_idx # make start with 0
-        SCM.addNode(node_idx=PGM.curr_node_idx, ptcloud=curr_scan_down_pts)
-        if(PGM.curr_node_idx == 0):
+        # LiDAR point pre-processing & Downsampling
+        frame = compensator.deskew_scan(frame, KICP.poses, timestamps)
+        frame = preprocessor(frame)
+
+        ds_frame = kiss_icp.voxelization.voxel_down_sample(frame, config.mapping.voxel_size * 0.5)
+        source = kiss_icp.voxelization.voxel_down_sample(ds_frame, config.mapping.voxel_size * 1.5)
+
+        # Motion model & Adaptive threshold
+        sigma = KICP.get_adaptive_threshold()
+        if len(KICP.poses) < 2:
+            prediction = np.eye(4)
+        else:
+            prediction = invert_SE3(KICP.poses[-2]) @ KICP.poses[-1]
+        last_pose = KICP.poses[-1] if KICP.poses else np.eye(4)
+        initial_guess = last_pose @ prediction
+
+        # Upload point cloud data to pose graph optimization and scan context
+        PGM.curr_node_idx = idx
+        SCM.addNode(node_idx=PGM.curr_node_idx, ptcloud=ds_frame)
+        if PGM.curr_node_idx == 0:
             PGM.prev_node_idx = PGM.curr_node_idx
-            prev_scan_pts = copy.deepcopy(curr_scan_pts)
+            prev_scan_pts = copy.deepcopy(frame)
             icp_initial = np.eye(4)
             continue
 
-        
-        prev_scan_down_pts = Ptutils.random_sampling(prev_scan_pts, num_points=args.num_icp_points)
+        # ICP registration
+        new_pose = kiss_icp.registration.register_frame(
+            points=source,
+            voxel_map=KICP.local_map,
+            initial_guess=initial_guess,
+            max_correspondance_distance=3 * sigma,
+            kernel=sigma / 3,
+        )
 
-        if args.use_open3d: # calc odometry using custom ICP
-            source = o3d.geometry.PointCloud()
-            source.points = o3d.utility.Vector3dVector(curr_scan_down_pts)
+        # Get relative pose
+        relative_pose = np.matmul(np.linalg.inv(last_pose), new_pose)
 
-            target = o3d.geometry.PointCloud()
-            target.points = o3d.utility.Vector3dVector(prev_scan_down_pts)
+        # Update the adaptive threshold
+        KICP.adaptive_threshold.update_model_deviation(np.linalg.inv(initial_guess) @ new_pose)
+        KICP.local_map.update(ds_frame, new_pose)
+        KICP.poses.append(new_pose)
 
-            reg_p2p = o3d.pipelines.registration.registration_icp(
-                                                                source = source, 
-                                                                target = target, 
-                                                                max_correspondence_distance = 10, 
-                                                                init = icp_initial, 
-                                                                estimation_method = o3d.pipelines.registration.TransformationEstimationPointToPoint(), criteria = o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration=20)
-                                                                )
-            odom_transform = reg_p2p.transformation 
-        else:   # calc odometry using open3d
-            odom_transform, _, _ = ICP.icp(curr_scan_down_pts, prev_scan_down_pts, init_pose=icp_initial, max_iterations=20)
+        # Pose graph optimization
+        # update the current (moved) pose
+        PGM.curr_se3 = np.matmul(PGM.curr_se3, relative_pose)
 
-        # update the current (moved) pose 
-        PGM.curr_se3 = np.matmul(PGM.curr_se3, odom_transform)
-        icp_initial = odom_transform # assumption: constant velocity model (for better next ICP converges)
+        # add the odometry factor to the graph
+        PGM.addOdometryFactor(relative_pose)
 
-        # add the odometry factor to the graph 
-        PGM.addOdometryFactor(odom_transform)
-
-        # renewal the prev information 
+        # renewal the prev information
         PGM.prev_node_idx = PGM.curr_node_idx
-        prev_scan_pts = copy.deepcopy(curr_scan_pts)
+        prev_scan_pts = copy.deepcopy(frame)
 
-        # loop detection and optimize the graph 
-        if(PGM.curr_node_idx > 1 and PGM.curr_node_idx % args.try_gap_loop_detection == 0): 
-            # 1/ loop detection 
+        # loop detection and optimize the graph
+        if PGM.curr_node_idx > 1 and PGM.curr_node_idx % args.try_gap_loop_detection == 0:
+            # 1/ loop detection
             loop_idx, loop_dist, yaw_diff_deg = SCM.detectLoop()
-            if(loop_idx == None): # NOT FOUND
+            if loop_idx == None:  # NOT FOUND
                 pass
             else:
                 print("Loop event detected: ", PGM.curr_node_idx, loop_idx, loop_dist)
-                # 2-1/ add the loop factor 
+                # 2-1/ add the loop factor
                 loop_scan_down_pts = SCM.getPtcloud(loop_idx)
-                loop_transform, _, _ = ICP.icp(curr_scan_down_pts, loop_scan_down_pts, init_pose=yawdeg2se3(yaw_diff_deg), max_iterations=20)
-                PGM.addLoopFactor(loop_transform, loop_idx)
 
-                # 2-2/ graph optimization 
+                loop_source = o3d.geometry.PointCloud()
+                loop_source.points = o3d.utility.Vector3dVector(ds_frame)
+
+                loop_target = o3d.geometry.PointCloud()
+                loop_target.points = o3d.utility.Vector3dVector(loop_scan_down_pts)
+
+                loop_transform = o3d.pipelines.registration.registration_icp(
+                    source=loop_source,
+                    target=loop_target,
+                    max_correspondence_distance=10,
+                    init=yawdeg2se3(yaw_diff_deg),
+                    estimation_method=o3d.pipelines.registration.TransformationEstimationPointToPoint(),
+                    criteria=o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration=20)
+                )
+                if loop_transform.transformation is None:
+                    pass
+
+                PGM.addLoopFactor(loop_transform.transformation, loop_idx)
+
+                # 2-2/ graph optimization
                 PGM.optimizePoseGraph()
 
-                # 2-2/ save optimized poses
-                ResultSaver.saveOptimizedPoseGraphResult(PGM.curr_node_idx, PGM.graph_optimized)
+                # 2-3/ update poses
+                apply_optimized_poses(PGM.graph_optimized, PGM.curr_node_idx, KICP.poses)
 
-        # save the ICP odometry pose result (no loop closure)
-        ResultSaver.saveUnoptimizedPoseGraphResult(PGM.curr_se3, PGM.curr_node_idx) 
-        if(for_idx % num_frames_to_skip_to_show == 0): 
-            ResultSaver.vizCurrentTrajectory(fig_idx=fig_idx)
-            writer.grab_frame()
+        # Processing time counter + visualization
+        times.append(time.perf_counter_ns() - start_time)
+        visualizer.update(frame, source, KICP.local_map, KICP.poses[-1])
+
+
+if __name__ == "__main__":
+    run()
